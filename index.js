@@ -46,12 +46,16 @@ function printHelp() {
     infisical-env-push [options]
 
   Options:
-    --env-file   <file>   .env file to read (default: .env)
-    --env        <env>    Infisical environment (default: .infisical.json → "dev")
-    --path       <path>   Secret path (default: /)
-    --project-id <id>     Project ID (default: .infisical.json)
-    --dry-run             Show keys without pushing
-    --help                Show this help
+    --env-file   <file>       .env file to read (default: .env)
+    --env        <env,...>    One or more environments, comma-separated (default: .infisical.json → "dev")
+    --path       <path>       Secret path (default: /)
+    --project-id <id>         Project ID (default: .infisical.json)
+    --dry-run                 Show keys without pushing
+    --help                    Show this help
+
+  Examples:
+    infisical-env-push --path /backend
+    infisical-env-push --env dev,prod --path /backend
   `);
 }
 
@@ -76,11 +80,12 @@ if (!jsonPath) {
 
 const config = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
 const projectId = args["project-id"] || config.workspaceId;
-const env = args["env"] || config.defaultEnvironment || "dev";
+const envArg = args["env"] || config.defaultEnvironment || "dev";
+const envs = String(envArg).split(",").map((e) => e.trim()).filter(Boolean);
 
 console.log(`Config  : ${jsonPath}`);
 console.log(`Project : ${projectId}`);
-console.log(`Env     : ${env}`);
+console.log(`Envs    : ${envs.join(", ")}`);
 console.log(`Path    : ${secretPath}`);
 
 if (!fs.existsSync(envFile)) {
@@ -94,7 +99,7 @@ if (pairs.length === 0) {
   process.exit(1);
 }
 
-console.log(`\nPushing ${pairs.length} secrets...\n`);
+console.log(`\nPushing ${pairs.length} secrets to ${envs.length} environment(s)...\n`);
 
 if (dryRun) {
   console.log("--- DRY RUN ---");
@@ -102,17 +107,15 @@ if (dryRun) {
   process.exit(0);
 }
 
-const result = spawnSync(
-  "infisical",
-  [
-    "secrets",
-    "set",
-    ...pairs,
-    `--env=${env}`,
-    `--projectId=${projectId}`,
-    `--path=${secretPath}`,
-  ],
-  { stdio: "inherit", shell: true },
-);
+let exitCode = 0;
+for (const env of envs) {
+  console.log(`\n--- ${env} ---`);
+  const result = spawnSync(
+    "infisical",
+    ["secrets", "set", ...pairs, `--env=${env}`, `--projectId=${projectId}`, `--path=${secretPath}`],
+    { stdio: "inherit", shell: true },
+  );
+  if ((result.status ?? 1) !== 0) exitCode = result.status ?? 1;
+}
 
-process.exit(result.status ?? 1);
+process.exit(exitCode);
