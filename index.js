@@ -4,8 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
-// ── Yardımcılar ───────────────────────────────────────────────────────────────
-
 function parseArgs(argv) {
   const args = {};
   for (let i = 2; i < argv.length; i++) {
@@ -32,34 +30,6 @@ function findInfisicalJson(startDir) {
   }
 }
 
-// Infisical binary'yi bul — önce npm kurulum yollarına bak, sonra PATH'e düş
-function findInfisicalBin() {
-  const candidates =
-    process.platform === "win32"
-      ? [
-          // npm global prefix'e göre
-          path.join(
-            process.execPath, // node.exe
-            "../../node_modules/@infisical/cli/bin/infisical.exe",
-          ),
-          "C:\\Program Files\\nodejs\\node_modules\\@infisical\\cli\\bin\\infisical.exe",
-          path.join(
-            process.env.APPDATA || "",
-            "npm/node_modules/@infisical/cli/bin/infisical.exe",
-          ),
-        ]
-      : ["/usr/local/bin/infisical", "/usr/bin/infisical"];
-
-  for (const c of candidates) {
-    try {
-      if (fs.existsSync(c)) return c;
-    } catch {}
-  }
-  // Bulamazsak PATH'ten dene
-  return process.platform === "win32" ? "infisical.exe" : "infisical";
-}
-
-// .env satırlarını KEY=VALUE array'ine çevirir (yorum & boş satır atlar)
 function parseEnvFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   return content
@@ -70,22 +40,20 @@ function parseEnvFile(filePath) {
 
 function printHelp() {
   console.log(`
-  infisical-env-push — .env dosyasını Infisical'a push eder
+  infisical-env-push — push .env secrets to Infisical
 
-  Kullanım:
-    infisical-env-push [seçenekler]
+  Usage:
+    infisical-env-push [options]
 
-  Seçenekler:
-    --env-file   <dosya>   .env dosyası (varsayılan: .env)
-    --env        <env>     Infisical ortamı (varsayılan: .infisical.json > "dev")
-    --path       <path>    Secret path (varsayılan: /)
-    --project-id <id>      Project ID (varsayılan: .infisical.json)
-    --dry-run              Push etmeden hangi keyleri göndereceğini gösterir
-    --help                 Bu yardımı gösterir
+  Options:
+    --env-file   <file>   .env file to read (default: .env)
+    --env        <env>    Infisical environment (default: .infisical.json → "dev")
+    --path       <path>   Secret path (default: /)
+    --project-id <id>     Project ID (default: .infisical.json)
+    --dry-run             Show keys without pushing
+    --help                Show this help
   `);
 }
-
-// ── Ana akış ──────────────────────────────────────────────────────────────────
 
 const args = parseArgs(process.argv);
 
@@ -98,10 +66,11 @@ const envFile = args["env-file"] || ".env";
 const secretPath = args["path"] || "/";
 const dryRun = args["dry-run"] === true;
 
-// .infisical.json'ı bul
 const jsonPath = findInfisicalJson(process.cwd());
 if (!jsonPath) {
-  console.error('HATA: .infisical.json bulunamadı. "infisical init" çalıştır.');
+  console.error(
+    'ERROR: .infisical.json not found. Run "infisical init" first.',
+  );
   process.exit(1);
 }
 
@@ -114,19 +83,18 @@ console.log(`Project : ${projectId}`);
 console.log(`Env     : ${env}`);
 console.log(`Path    : ${secretPath}`);
 
-// .env dosyasını parse et
 if (!fs.existsSync(envFile)) {
-  console.error(`HATA: ${envFile} bulunamadı`);
+  console.error(`ERROR: ${envFile} not found`);
   process.exit(1);
 }
 
 const pairs = parseEnvFile(envFile);
 if (pairs.length === 0) {
-  console.error(`HATA: ${envFile} içinde geçerli KEY=VALUE bulunamadı`);
+  console.error(`ERROR: No valid KEY=VALUE pairs found in ${envFile}`);
   process.exit(1);
 }
 
-console.log(`\nPushing ${pairs.length} secret...\n`);
+console.log(`\nPushing ${pairs.length} secrets...\n`);
 
 if (dryRun) {
   console.log("--- DRY RUN ---");
@@ -134,10 +102,8 @@ if (dryRun) {
   process.exit(0);
 }
 
-const bin = findInfisicalBin();
-
 const result = spawnSync(
-  bin,
+  "infisical",
   [
     "secrets",
     "set",
@@ -146,7 +112,7 @@ const result = spawnSync(
     `--projectId=${projectId}`,
     `--path=${secretPath}`,
   ],
-  { stdio: "inherit", shell: false },
+  { stdio: "inherit", shell: true },
 );
 
 process.exit(result.status ?? 1);

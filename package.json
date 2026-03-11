@@ -1,10 +1,10 @@
 {
   "name": "infisical-env-push",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Push .env secrets to Infisical using local .infisical.json config",
   "main": "index.js",
   "bin": {
-    "infisical-env-push": "./index.js"
+    "infisical-env-push": "index.js"
   },
   "scripts": {
     "test": "node index.js --dry-run"
@@ -17,8 +17,5 @@
     "cli"
   ],
   "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "dotenv": "^16.0.0"
-  }
+  "license": "MIT"
 }
