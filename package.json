@@ -1,6 +1,6 @@
 {
   "name": "infisical-env-push",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Push .env secrets to Infisical using local .infisical.json config",
   "main": "index.js",
   "bin": {

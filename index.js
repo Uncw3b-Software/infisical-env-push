@@ -81,7 +81,10 @@ if (!jsonPath) {
 const config = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
 const projectId = args["project-id"] || config.workspaceId;
 const envArg = args["env"] || config.defaultEnvironment || "dev";
-const envs = String(envArg).split(",").map((e) => e.trim()).filter(Boolean);
+const envs = String(envArg)
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
 
 console.log(`Config  : ${jsonPath}`);
 console.log(`Project : ${projectId}`);
@@ -99,7 +102,9 @@ if (pairs.length === 0) {
   process.exit(1);
 }
 
-console.log(`\nPushing ${pairs.length} secrets to ${envs.length} environment(s)...\n`);
+console.log(
+  `\nPushing ${pairs.length} secrets to ${envs.length} environment(s)...\n`,
+);
 
 if (dryRun) {
   console.log("--- DRY RUN ---");
@@ -112,7 +117,14 @@ for (const env of envs) {
   console.log(`\n--- ${env} ---`);
   const result = spawnSync(
     "infisical",
-    ["secrets", "set", ...pairs, `--env=${env}`, `--projectId=${projectId}`, `--path=${secretPath}`],
+    [
+      "secrets",
+      "set",
+      ...pairs,
+      `--env=${env}`,
+      `--projectId=${projectId}`,
+      `--path=${secretPath}`,
+    ],
     { stdio: "inherit", shell: true },
   );
   if ((result.status ?? 1) !== 0) exitCode = result.status ?? 1;
